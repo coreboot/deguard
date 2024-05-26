@@ -48,7 +48,7 @@ def GenerateRops(me_info):
     else:
         raise Exception("Unsupported ME version")
         
-    rops = ""
+    rops = b""
 
     ### start inf loop chain
 
@@ -137,7 +137,7 @@ ME_INFOS = [
 
 
 def GenerateSyslibCtx(me_info, syslib_ctx_addr):
-    shmem_descs = ""
+    shmem_descs = b""
     for i in range(me_info.NUM_SHMEM_DESC):
         shmem_descs += struct.pack("<LLLLL", 0x1, me_info.TARGET_ADDRESS - me_info.BUFFER_OFFSET,
                                    me_info.BUFFER_OFFSET + 0x40, 0, 0)

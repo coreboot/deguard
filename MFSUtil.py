@@ -84,7 +84,7 @@ When adding a directory, both the file path needs to end with a '/' character an
       if file:
         with argparse.FileType("wb")(args.output) as f: f.write(file.data)
       else:
-        print "File ID %d does not exist in the MFS System Volume" % args.file_id
+        print("File ID %d does not exist in the MFS System Volume" % args.file_id)
         sys.exit(-1)
     elif args.remove:
       mfs.getSystemVolume().removeFile(args.file_id)
@@ -93,7 +93,7 @@ When adding a directory, both the file path needs to end with a '/' character an
     elif args.add:
       file = mfs.getSystemVolume().getFile(args.file_id)
       if file:
-        print "File ID %d already exists in the MFS System Volume" % args.file_id
+        print("File ID %d already exists in the MFS System Volume" % args.file_id)
         sys.exit(-1)
       data = args.add.read()
       mfs.getSystemVolume().addFile(args.file_id, data, args.optimize)
@@ -105,7 +105,7 @@ When adding a directory, both the file path needs to end with a '/' character an
         file = mfs.getSystemVolume().getFile(id)
         if file:
           zi = zipfile.ZipInfo("file_%d.bin" % id)
-          zi.external_attr = (0644 << 16)
+          zi.external_attr = (0o644 << 16)
           z.writestr(zi, file.data)
       z.close()
   else:
@@ -122,9 +122,9 @@ When adding a directory, both the file path needs to end with a '/' character an
         path = file.path
         if file.isDirectory():
           path += posixpath.sep
-          attr = (040755 << 16) | 0x30
+          attr = (0o40755 << 16) | 0x30
         else:
-          attr = (0644 << 16)
+          attr = (0o644 << 16)
         zi = zipfile.ZipInfo(path)
         zi.external_attr = attr
         z.writestr(zi, file.data)
@@ -132,23 +132,23 @@ When adding a directory, both the file path needs to end with a '/' character an
     elif args.extract:
       file = cfg.getFile(args.file_path)
       if file is None:
-        print "File path '%s' does not exist in the CFG file" % args.file_path
+        print("File path '%s' does not exist in the CFG file" % args.file_path)
         sys.exit(-1)
       with argparse.FileType("wb")(args.output) as f: f.write(file.data)
     elif args.remove:
       res = cfg.removeFile(args.file_path, args.recursive)
       if not res:
         if cfg.getFile(args.file_path) is None:
-          print "File path '%s' does not exist in the CFG file" % args.file_path
+          print("File path '%s' does not exist in the CFG file" % args.file_path)
         else:
-          print "File path '%s' is a non-empty directory in the CFG file (use --recursive)" % args.file_path
+          print("File path '%s' is a non-empty directory in the CFG file (use --recursive)" % args.file_path)
         sys.exit(-1)
       cfg.generate(args.alignment)
       with argparse.FileType("wb")(args.output) as f: f.write(cfg.data)
     elif args.add:
       file = cfg.getFile(args.file_path)
       if file:
-        print "File path '%s' already exists in the CFG file" % args.file_path
+        print("File path '%s' already exists in the CFG file" % args.file_path)
         sys.exit(-1)
       data = args.add.read()
       mode = CFG.strToMode(args.mode)
@@ -159,8 +159,8 @@ When adding a directory, both the file path needs to end with a '/' character an
         assert mode & 0x1000 == 0
         
       if not cfg.addFile(args.file_path, data, mode, opt, args.uid, args.gid):
-        print "Error adding file to path '%s' in the CFG file " \
-          "(parent doesn't exist or is not a directory?)" % args.file_path
+        print("Error adding file to path '%s' in the CFG file " \
+          "(parent doesn't exist or is not a directory?)" % args.file_path)
         sys.exit(-1)
       cfg.generate(args.alignment)
       with argparse.FileType("wb")(args.output) as f: f.write(cfg.data)

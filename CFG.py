@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: MIT
 import posixpath
 import struct
+from functools import cmp_to_key
+
+def cmp(a, b):
+    return (a > b) - (a < b)
 
 class CFGAlignment:
   ALIGN_NONE = 0
@@ -20,7 +24,7 @@ class CFG(object):
     total_data = 0
     path = ["/"]
     parent = None
-    for i in xrange(self.num_records):
+    for i in range(self.num_records):
         record = CFGRecord(self.data, i)
         #assert (record.isDirectory() and record.offset == data_offset) or \
         #  (not record.isDirectory() and record.offset == data_offset + total_data)
@@ -80,13 +84,13 @@ class CFG(object):
 
   def generate(self, alignment):
     self.records = []
-    file_data = ""
+    file_data = b""
     if len(self.files) > 0:
       (self.records, file_data) = self.files[0].generateRecords(alignment=alignment)
     self.num_records = len(self.records)
     self.data = self.CFG_FMT.pack(self.num_records)
     data_offset = len(self.data) + CFGRecord.RECORD_FMT.size * self.num_records
-    alignment_data = ""
+    alignment_data = b""
     if alignment != CFGAlignment.ALIGN_NONE:
       alignment_extra = data_offset % 0x40
       if alignment_extra > 0:
@@ -117,7 +121,7 @@ class CFG(object):
     assert mode & 0xE000 == 0
     modeStr = "dAEIrwxrwxrwx"
     ret = ""
-    for i in xrange(13):
+    for i in range(13):
       if mode & (0x1000 >> i):
         ret += modeStr[i]
       else:
@@ -129,7 +133,7 @@ class CFG(object):
     modeStr = "dAEIrwxrwxrwx"
     assert len(str) == len(modeStr)
     mode = 0
-    for i in xrange(13):
+    for i in range(13):
       if str[i] == modeStr[i]:
         mode |= (0x1000 >> i)
       else:
@@ -141,7 +145,7 @@ class CFG(object):
     assert opt & 0xFFF0 == 0
     optStr = "?!MF"
     ret = ""
-    for i in xrange(4):
+    for i in range(4):
       if opt & (8 >> i):
         ret += optStr[i]
       else:
@@ -153,7 +157,7 @@ class CFG(object):
     optStr = "?!MF"
     assert len(str) == len(optStr)
     opt = 0
-    for i in xrange(4):
+    for i in range(4):
       if str[i] == optStr[i]:
         opt |= (8 >> i)
       else:
@@ -168,6 +172,7 @@ class CFGRecord(object):
       self.data = data[offset:offset + self.RECORD_FMT.size]
       (self.name, zero, self.mode, self.opt, self.size,
        self.uid, self.gid, self.offset) = self.RECORD_FMT.unpack(self.data)
+      self.name = self.name.decode('utf-8')
       self.name = self.name.strip('\0')
       if self.name == "..":
         assert self.isDirectory()
@@ -179,12 +184,12 @@ class CFGRecord(object):
     return self.mode & 0x1000 == 0x1000
 
   def generate(self):
-    self.data = CFGRecord.RECORD_FMT.pack(self.name, 0, self.mode, self.opt,
+    self.data = CFGRecord.RECORD_FMT.pack(self.name.encode("utf-8"), 0, self.mode, self.opt,
                                           self.size, self.uid, self.gid, self.offset)
 
   @staticmethod
   def createRecord(name, mode, opt, uid, gid, size, offset):
-    data = '\0' * CFG.CFG_FMT.size + CFGRecord.RECORD_FMT.pack(name, 0, mode, opt, size,
+    data = b'\0' * CFG.CFG_FMT.size + CFGRecord.RECORD_FMT.pack(name.encode("utf-8"), 0, mode, opt, size,
                                                                uid, gid, offset)
     return CFGRecord(data, 0)
 
@@ -219,13 +224,13 @@ class CFGFile(object):
   def addChild(self, child):
     assert self.isDirectory()
     self.children.append(child)
-    self.children.sort()
+    self.children.sort(key=cmp_to_key(CFGFile.__cmp__))
 
   def removeChild(self, child):
     assert self.isDirectory() and child in self.children
     self.children.remove(child)
 
-  def generateRecords(self, data = "", alignment=CFGAlignment.ALIGN_NONE):
+  def generateRecords(self, data = b"", alignment=CFGAlignment.ALIGN_NONE):
     self.record.size = 0 if self.isDirectory() else self.size
     self.record.offset = 0 if self.isDirectory() else len(data)
     records = [self.record]
