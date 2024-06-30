@@ -15,7 +15,7 @@ Any machine running Intel ME v11.x.x.x. This includes Skylake, Kaby Lake, and so
 This uses [CVE-2017-5705](https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-00086.html).
 
 It has been fixed by Intel in newer ME v11.x.x.x firmware releases, however ME11 hardware has no protection
-again downgrading the ME version by overwriting the SPI flash physically, thus we can downgrade to a vulnerable
+against downgrading the ME version by overwriting the SPI flash physically, thus we can downgrade to a vulnerable
 version.
 
 After downgrade, we exploit the bup module of the vulnerable firmware, overwriting the copy of boot guard FPFs
