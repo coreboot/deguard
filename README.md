@@ -1,7 +1,3 @@
-<!---
-SPDX-License-Identifier: GPL-2.0-only
--->
-
 # Intel BootGuard disable PoC for the Dell OptiPlex 3050
 
 Run './RUNME.sh' to generate an ME image that bypasses BootGuard on the OptiPlex 3050.
