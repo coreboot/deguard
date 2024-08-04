@@ -2,6 +2,9 @@
 
 Run './RUNME.sh' to generate an ME image that bypasses BootGuard on the OptiPlex 3050.
 
+Please note that the HAP bit **must** be enabled in your flash descriptor for a deguard generated ME image
+to function currently.
+
 ## What hardware is vulnerable?
 
 Any machine running Intel ME v11.x.x.x. This includes Skylake, Kaby Lake, and some Coffee Lake PCHs.
