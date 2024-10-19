@@ -18,38 +18,46 @@ stored in SRAM, resulting in the fused BootGuard configuration being replaced wi
 
 ## Adding new target
 
-As a board porter, you need to:
+As a board porter, you need to provide the delta between the default and vendor provided ME configuration.
 
-1. Provide the delta between the default and vendor provided ME configuration.
+This goes in the `data/delta/<target>` directory for each target.
 
-   This goes in the `data/delta/<target>` directory for each target.
+To obtain this, dump the vendor firmware from your board, and execute:
 
-   To obtain this, dump the vendor firmware from your board, and execute:
+`./generatedelta.py --input <dump> --output data/delta/<target>`
 
-    `./generatedelta.py --input <dump> --output data/delta/<target>`
+Note the delta generation only takes your factory dump as an input. This is because an ME image contains both the
+default and system specific configuration, and these can be compared by deguard.
 
-   You can discard `home/{amt,fwupdate,pavp,ptt}` from the delta.
+You *must discard* the `/home/secureboot` directory from the delta for the zero FPF config to work.
 
-2. Generate fake FPF data for the board that overrides the default configuration.
-
-   This goes in the `data/fpfs/<target>` directory for each target.
-
-   FIXME explain how to do this.
+You can optionally also discard `home/{amt,fwupdate,pavp,ptt}` from the delta.
 
 ## Generating images for an existing target
 
 As a user wishing to generate an image for a supported target:
 
-1. You will need to obtain a donor image for your platform variant with a supported ME version (see URLs below).
+You will need to obtain a donor image for your platform variant with a supported ME version (see URLs below).
 
-   This can either be a full image with a flash descriptor or just a bare ME region.
+This can either be a full image with a flash descriptor or just a bare ME region.
 
-2. Execute the following command and enjoy:
+Afterwards, execute the following command and enjoy:
 
-    `./finalimage.py --delta data/mfs/<target> --version <donor version> --pch <H or LP PCH type> --fake-fpfs data/fpfs/<target> --input <donor> --output <output>`
+`./finalimage.py --delta data/delta/<target> --version <donor version> --pch <H or LP PCH type> --fake-fpfs data/fpfs/zero --input <donor> --output <output>`
 
-   Plaese note that the output will be a bare deguard patched ME region and **the HAP bit must be
-   enabled** in your flash descriptor for a deguard generated ME image to work.
+Please note that the output will be a bare deguard patched ME region and **the HAP bit must beenabled** in your flash
+descriptor for a deguard generated ME image to work.
+
+## Note on field programmable fuses
+
+This document recommends faking a set of FPFs that are all zero as a BootGuard bypass strategy.
+
+This causes the platform to work in legacy mode, and does not require dumping the fuses from the PCH.
+
+It is also possible to enable measured mode instead (there is some example FPF data for this).
+
+Theoretically it is possible to even re-enable BootGuard with a custom private key (with the caveat that it is
+obviously insecure against physical access).
 
 ## Donor images
 

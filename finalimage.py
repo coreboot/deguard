@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 import argparse
-import copy
 import os
 from lib.exploit import GenerateShellCode
 from lib.image import parse_ifd_or_me
@@ -68,7 +67,7 @@ parser.add_argument("--output", required=True, help="Output ME image")
 parser.add_argument("--delta", required=True, help="MFS delta directory")
 parser.add_argument('--version', required=True, help='Donor ME version')
 parser.add_argument('--pch', required=True, help='PCH type')
-parser.add_argument('--fake-fpfs', required=True, help='replace SRAM copy of FPFs with the provided data')
+parser.add_argument('--fake-fpfs', help='replace SRAM copy of FPFs with the provided data')
 parser.add_argument('--red-unlock', help='allow full JTAG access to the entire platform', action='store_true')
 args = parser.parse_args()
 
@@ -81,8 +80,10 @@ if not os.path.isdir(args.delta):
     raise ValueError(f"Delta directory {args.delta} not found")
 
 # Read FPF data
-with open(args.fake_fpfs, "rb") as f:
-    fake_fpfs = f.read()
+fake_fpfs = None
+if args.fake_fpfs:
+    with open(args.fake_fpfs, "rb") as f:
+        fake_fpfs = f.read()
 
 # Parse MFS and get its system volume
 mfs = MFS(me.entry_data("MFS"))
@@ -96,7 +97,7 @@ fitc_cfg = generate_fitc_from_intel_and_delta(intel_cfg, args.delta)
 # Modify fitc.cfg with exploit
 apply_exploit_to_fitc(fitc_cfg, args.version, args.pch, fake_fpfs, args.red_unlock)
 # Re-generate fitc.cfg
-fitc_cfg.generate(alignment=0)
+fitc_cfg.generate(alignment=2)
 
 # Write fitc.cfg
 add_fitc_to_sysvol(sysvol, fitc_cfg.data)
