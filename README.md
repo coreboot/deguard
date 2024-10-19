@@ -1,15 +1,11 @@
-# Intel BootGuard disable PoC for the Dell OptiPlex 3050
+# Bypass Intel BootGuard on ME v11.x.x.x hardware
 
-Run './RUNME.sh' to generate an ME image that bypasses BootGuard on the OptiPlex 3050.
+This utility allows generating BootGuard bypass images for hardware running ME v11.x.x.x firmware.
 
-Please note that the HAP bit **must** be enabled in your flash descriptor for a deguard generated ME image
-to function currently.
+This includes Skylake, Kaby Lake, and some Coffee Lake PCHs. Both the H (desktop) and LP (mobile) firmware
+varaints are supported.
 
-## What hardware is vulnerable?
-
-Any machine running Intel ME v11.x.x.x. This includes Skylake, Kaby Lake, and some Coffee Lake PCHs.
-
-## How it works?
+## Background
 
 This uses [CVE-2017-5705](https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-00086.html).
 
@@ -17,19 +13,53 @@ It has been fixed by Intel in newer ME v11.x.x.x firmware releases, however ME11
 against downgrading the ME version by overwriting the SPI flash physically, thus we can downgrade to a vulnerable
 version.
 
-After downgrade, we exploit the bup module of the vulnerable firmware, overwriting the copy of boot guard FPFs
-stored in SRAM, resulting in the fused boot guard configuration being replaced with our desired one.
+After downgrade, we exploit the bup module of the vulnerable firmware, overwriting the copy of field programmable fuses
+stored in SRAM, resulting in the fused BootGuard configuration being replaced with our desired one.
 
-In the case of the OptiPlex 3050, we disable verified boot enforcement, letting the user boot any firmware and
-control their hardware.
+## Adding new target
 
-## Note on code quality
+As a board porter, you need to:
 
-The code in this repository is copy pasted from various places and was haphazardly modified until it
-generated the desired image. It is no example on how to write good software :)
+1. Provide the delta between the default and vendor provided ME configuration.
 
-I am planning on releasing a better utility that accomplishes the same task in the future that
-is generic to all Skylake and Kaby Lake machines, stay tuned!
+   This goes in the `data/delta/<target>` directory for each target.
+
+   To obtain this, dump the vendor firmware from your board, and execute:
+
+    `./generatedelta.py --input <dump> --output data/delta/<target>`
+
+   FIXME the dump needs to be ran through FIT first to work for now but this can be fixed.
+
+2. Generate fake FPF data for the board that overrides the default configuration.
+
+   This goes in the `data/fpfs/<target>` directory for each target.
+
+   FIXME explain how to do this.
+
+## Generating images for an existing target
+
+As a user wishing to generate an image for a supported target:
+
+1. You will need to obtain a donor image for your platform variant with a supported ME version (see URLs below).
+
+   This can either be a full image with a flash descriptor or just a bare ME region.
+
+2. Execute the following command and enjoy:
+
+    `./finalimage.py --delta data/mfs/<target> --version <donor version> --pch <H or LP PCH type> --fake-fpfs data/fpfs/<target> --input <donor> --output <output>`
+
+   Plaese note that the output will be a bare deguard patched ME region and **the HAP bit must be
+   enabled** in your flash descriptor for a deguard generated ME image to work.
+
+## Donor images
+
+This section lists some URLs to recommended and tested donor images. Any image with a supported firmware
+version and variant ought to work, but the path of least resistance is for everyone to use the same images.
+
+|Version|Variant|URL|
+|-|-|-|
+|11.6.0.1126|H (Desktop)|[link](https://web.archive.org/web/20230822134231/https://download.asrock.com/BIOS/1151/H110M-DGS(7.30)ROM.zip)|
+|11.6.0.1126|LP (Laptop)|FIXME find a donor|
 
 ## Thanks
 

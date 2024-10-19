@@ -1,4 +1,6 @@
-# SPDX-License-Identifier: MIT
+# SPDX-License-Identifier: GPL-2.0-only
+# This code is based on MFSUtil by Youness Alaoui (see `doc/LICENSE.orig` for original copyright)
+
 import posixpath
 import struct
 from functools import cmp_to_key

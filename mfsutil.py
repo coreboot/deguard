@@ -1,8 +1,10 @@
-# SPDX-License-Identifier: MIT
+#!/usr/bin/python3
+# SPDX-License-Identifier: GPL-2.0-only
+# This code is based on MFSUtil by Youness Alaoui (see `doc/LICENSE.orig` for original copyright)
 
 import sys, argparse, textwrap
-from MFS import MFS
-from CFG import CFG
+from lib.mfs import MFS
+from lib.cfg import CFG
 import zipfile, posixpath
 
 def main():
