@@ -53,7 +53,7 @@ class IFDImage:
             limit = ex(flregN, self.FLREGN_LIMIT)
             if base == 0x7fff and limit == 0x0000:  # Unused region
                 continue
-            self.regions[region] = (base << 12, limit << 12)
+            self.regions[region] = (base << 12, limit << 12 | 0xfff)
 
     def __str__(self):
         return "\n".join(f"  {region.name:<4}  {extent[0]:08x}-{extent[1]:08x}" \

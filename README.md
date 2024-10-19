@@ -28,7 +28,7 @@ As a board porter, you need to:
 
     `./generatedelta.py --input <dump> --output data/delta/<target>`
 
-   FIXME the dump needs to be ran through FIT first to work for now but this can be fixed.
+   You can discard `home/{amt,fwupdate,pavp,ptt}` from the delta.
 
 2. Generate fake FPF data for the board that overrides the default configuration.
 

