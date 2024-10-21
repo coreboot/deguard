@@ -43,9 +43,9 @@ This can either be a full image with a flash descriptor or just a bare ME region
 
 Afterwards, execute the following command and enjoy:
 
-`./finalimage.py --delta data/delta/<target> --version <donor version> --pch <H or LP PCH type> --fake-fpfs data/fpfs/zero --input <donor> --output <output>`
+`./finalimage.py --delta data/delta/<target> --version <donor version> --pch <H or LP PCH type> --sku <2M or 5M SKU> --fake-fpfs data/fpfs/zero --input <donor> --output <output>`
 
-Please note that the output will be a bare deguard patched ME region and **the HAP bit must beenabled** in your flash
+Please note that the output will be a bare deguard patched ME region and **the HAP bit must be enabled** in your flash
 descriptor for a deguard generated ME image to work.
 
 ## Note on field programmable fuses
@@ -64,10 +64,10 @@ obviously insecure against physical access).
 This section lists some URLs to recommended and tested donor images. Any image with a supported firmware
 version and variant ought to work, but the path of least resistance is for everyone to use the same images.
 
-|Version|Variant|URL|
-|-|-|-|
-|11.6.0.1126|H (Desktop)|[link](https://web.archive.org/web/20230822134231/https://download.asrock.com/BIOS/1151/H110M-DGS(7.30)ROM.zip)|
-|11.6.0.1126|LP (Laptop)|FIXME find a donor|
+|Version|Variant|SKU|URL|Notes|
+|-|-|-|-|
+|11.6.0.1126|H (Desktop)|2M|[link](https://web.archive.org/web/20230822134231/https://download.asrock.com/BIOS/1151/H110M-DGS(7.30)ROM.zip)|Zipped flash image|
+|11.6.0.1126|LP (Laptop)|2M|[link](https://dl.dell.com/FOLDER04573471M/1/Inspiron_5468_1.3.0.exe)|Dell BIOS update (use Dell_PFS_Extract.py)|
 
 ## Thanks
 
