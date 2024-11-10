@@ -67,7 +67,7 @@ version and variant ought to work, but the path of least resistance is for every
 |Version|Variant|SKU|URL|Notes|
 |-|-|-|-|
 |11.6.0.1126|H (Desktop)|2M|[link](https://web.archive.org/web/20230822134231/https://download.asrock.com/BIOS/1151/H110M-DGS(7.30)ROM.zip)|Zipped flash image|
-|11.6.0.1126|LP (Laptop)|2M|[link](https://dl.dell.com/FOLDER04573471M/1/Inspiron_5468_1.3.0.exe)|Dell BIOS update (use Dell_PFS_Extract.py)|
+|11.6.0.1126|LP (Laptop)|2M|[link](https://web.archive.org/web/20241110222323/https://dl.dell.com/FOLDER04573471M/1/Inspiron_5468_1.3.0.exe)|Dell BIOS update (use Dell_PFS_Extract.py)|
 
 ## Thanks
 
