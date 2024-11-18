@@ -45,8 +45,12 @@ Afterwards, execute the following command and enjoy:
 
 `./finalimage.py --delta data/delta/<target> --version <donor version> --pch <H or LP PCH type> --sku <2M or 5M SKU> --fake-fpfs data/fpfs/zero --input <donor> --output <output>`
 
-Please note that the output will be a bare deguard patched ME region and **the HAP bit must be enabled** in your flash
-descriptor for a deguard generated ME image to work.
+The output will be a bare deguard patched ME region.
+
+Please note:
+- The **the HAP bit must be enabled** in your flash descriptor for deguard generated ME images to work.
+- The DCI bit must be enabled in your flash descriptor for DCI debugging over USB.
+
 
 ## Note on field programmable fuses
 
