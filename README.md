@@ -18,7 +18,7 @@ stored in SRAM, resulting in the fused BootGuard configuration being replaced wi
 
 ## Adding new target
 
-As a board porter, you need to provide the delta between the default and vendor provided ME configuration.
+You will need to provide the delta between the default and vendor provided ME configuration.
 
 This goes in the `data/delta/<target>` directory for each target.
 
@@ -35,33 +35,35 @@ You can optionally also discard `home/{amt,fwupdate,pavp,ptt}` from the delta.
 
 ## Generating images for an existing target
 
-As a user wishing to generate an image for a supported target:
+First, the **the HAP bit must be enabled** in your flash descriptor for deguard generated ME images to work.
 
-You will need to obtain a donor image for your platform variant with a supported ME version (see URLs below).
+This can be set using `ifdtool` (the modified flash descriptor will have a `.new` extension):
+
+`ifdtool -p sklkbl -M 1 ifd.bin`
+
+You will then need to obtain a donor image for your platform variant with a supported ME version (see URLs below).
 
 This can either be a full image with a flash descriptor or just a bare ME region.
 
-Afterwards, execute the following command and enjoy:
+To generate a deguard patched ME image, execute the following command:
 
 `./finalimage.py --delta data/delta/<target> --version <donor version> --pch <H or LP PCH type> --sku <2M or 5M SKU> --fake-fpfs data/fpfs/zero --input <donor> --output <output>`
 
 The output will be a bare deguard patched ME region.
 
-Please note:
-- The **the HAP bit must be enabled** in your flash descriptor for deguard generated ME images to work.
-- The DCI bit must be enabled in your flash descriptor for DCI debugging over USB.
+## DCI Debugging over USB
 
+Both the and main CPU cores, and ME core can be debugged using DCI (JTAG over USB essentially).
 
-## Note on field programmable fuses
+You will need:
 
-This document recommends faking a set of FPFs that are all zero as a BootGuard bypass strategy.
+-  USB 3.0 A-to-A cable with the VBUS pin removed to connect the target and your system running the debugger. This can be purchased pre-made, or the pin can be removed from a commodity cable.
 
-This causes the platform to work in legacy mode, and does not require dumping the fuses from the PCH.
+- Enable the DCI bit in the flash descriptor (See CB: 82272).
 
-It is also possible to enable measured mode instead (there is some example FPF data for this).
+- To debug the main CPU: firmware, or kernel mode software has to set the consent bit (See CB: 83268).
 
-Theoretically it is possible to even re-enable BootGuard with a custom private key (with the caveat that it is
-obviously insecure against physical access).
+- To debug the ME core itself: Red Unlock needs to be enabled in the deguard patched ME image (see `--red-unlock`). Please note that red unlock has disastrous ramifications for the security of the running system and should only be used for debugging.
 
 ## Donor images
 
@@ -69,9 +71,9 @@ This section lists some URLs to recommended and tested donor images. Any image w
 version and variant ought to work, but the path of least resistance is for everyone to use the same images.
 
 |Version|Variant|SKU|URL|Notes|
-|-|-|-|-|
+|-|-|-|-|-|
 |11.6.0.1126|H (Desktop)|2M|[link](https://web.archive.org/web/20230822134231/https://download.asrock.com/BIOS/1151/H110M-DGS(7.30)ROM.zip)|Zipped flash image|
-|11.6.0.1126|LP (Laptop)|2M|[link](https://web.archive.org/web/20241110222323/https://dl.dell.com/FOLDER04573471M/1/Inspiron_5468_1.3.0.exe)|Dell BIOS update (use Dell_PFS_Extract.py)|
+|11.6.0.1126|LP (Laptop)|2M|[link](https://web.archive.org/web/20241110222323/https://dl.dell.com/FOLDER04573471M/1/Inspiron_5468_1.3.0.exe)|Dell BIOS update (use [Dell_PFS_Extract.py](https://github.com/vuquangtrong/Dell-PFS-BIOS-Assembler/blob/master/Dell_PFS_Extract.py))|
 
 ## Thanks
 
