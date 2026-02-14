@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-only
 # This code is based on MFSUtil by Youness Alaoui (see `doc/LICENSE.orig` for original copyright)
 
