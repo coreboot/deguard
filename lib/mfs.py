@@ -46,8 +46,10 @@ class MFS(object):
                 self.to_be_erased = page
             elif page.isSystemPage():
                 self.sys_pages.append(page)
-            else:
+            elif page.isDataPage():
                 self.data_pages.append(page)
+            else:
+                raise RuntimeError("A page has invalid type. MFS is likely corrupted.")
 
         assert self.num_sys_pages == len(self.sys_pages)
         assert self.num_data_pages == len(self.data_pages)
@@ -151,7 +153,9 @@ class MFSPage(object):
                 offset = self.PAGE_HEADER_FMT.size + self.SYSTEM_PAGE_INDICES_FMT.size + \
                                  chunk * (MFS.CHUNK_SIZE + MFS.CHUNK_CRC_SIZE)
                 data = self.data[offset:offset + MFS.CHUNK_SIZE + MFS.CHUNK_CRC_SIZE]
-                self.chunks.append(MFSChunk(data, last_chunk_id))
+                chunk = MFSChunk(data, last_chunk_id)
+                assert not chunk.faulty
+                self.chunks.append(chunk)
         else:
             data_free = self.DATA_PAGE_INDICES_FMT.unpack_from(self.data, self.PAGE_HEADER_FMT.size)
             self.chunks = [None] * MFS.CHUNKS_PER_DATA_PAGE
@@ -265,12 +269,14 @@ class MFSPage(object):
 
 class MFSChunk(object):
     def __init__(self, data, chunk_id, raw=True):
+        self.faulty = False
         self.chunk_id = chunk_id
         if raw:
             assert len(data) == MFS.CHUNK_SIZE + 2
             self.data = data[:-2]
             self.crc, = struct.unpack("<H", data[-2:])
-            assert self.crc == MFS.Crc16(self.data + struct.pack("<H", self.chunk_id))
+            if self.crc != MFS.Crc16(self.data + struct.pack("<H", self.chunk_id)):
+                self.faulty = True
         else:
             assert len(data) == MFS.CHUNK_SIZE
             self.data = data
@@ -453,6 +459,7 @@ class MFSFile(object):
         self.data = b""
 
     def addChunk(self, chunk, size):
+        assert not chunk.faulty
         self.chain.append(chunk.id)
         self.data = self.data + chunk.data[:size]
 
