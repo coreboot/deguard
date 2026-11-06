@@ -72,8 +72,7 @@ class MeImage:
     MARKER      = b"$FPT"
 
     NUMENT_OFF  = 0x14
-    HDRLEN_OFF  = 0x20
-    HDRSUM_OFF  = 0x21
+    HDRLEN_OFF  = 0x1a
 
     ENTRY_OFF   = 0x30
     ENTRY_SIZE  = 0x20
@@ -84,7 +83,8 @@ class MeImage:
         # Verify magic and checksum
         if self.data[self.MARKER_OFF:self.MARKER_OFF+4] != self.MARKER:
             raise ValueError("Invalid $FPT magic")
-        if sum(self.data[self.HEADER_OFF:self.data[self.HDRLEN_OFF]]) != 0:
+        hdr_len = self.data[self.HDRLEN_OFF]
+        if sum(self.data[self.HEADER_OFF:self.HEADER_OFF+hdr_len]) & 0xff != 0:
             raise ValueError("Invalid $FPT checksum")
 
         # Parse entries
