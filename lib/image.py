@@ -63,7 +63,7 @@ class IFDImage:
         if region not in self.regions:
             raise ValueError(f"IFD region {region} not present")
         base, limit = self.regions[region]
-        return self.data[base:limit]
+        return self.data[base:limit+1]
 
 class MeImage:
     HEADER_OFF  = 0x10
